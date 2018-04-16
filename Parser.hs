@@ -5,7 +5,7 @@ import Text.Parsec.Number (decimal, int)
 import Text.ParserCombinators.Parsec (Parser)
 import Text.ParserCombinators.Parsec.Char (alphaNum, char, letter, satisfy)
 import Text.ParserCombinators.Parsec.Combinator (many1, sepBy)
-import Text.ParserCombinators.Parsec.Prim ((<|>), many, parse)
+import Text.ParserCombinators.Parsec.Prim ((<|>), many, parse, try)
 import Util ((|>))
 
 
@@ -31,7 +31,7 @@ removeComments src = src
   |> filter (\x -> dropWhile isSpace x == "") 
 
 whitespace :: Parser Char
-whitespace = satisfy (\c -> isSpace 'c' && c /= '\n')
+whitespace = satisfy (\c -> isSpace c && c /= '\n')
 
 whitespaces :: Parser String
 whitespaces = many whitespace
@@ -44,7 +44,7 @@ symbol = do
 
 register :: Parser ASTExpr 
 register = do 
-    char '$'
+    _ <- char '$'
     dec <- many1 alphaNum
     return $ AEReg ('$':dec)
 
@@ -56,3 +56,35 @@ immediate = do
 expr :: Parser ASTExpr 
 expr = symbol <|> register <|> immediate 
 
+
+char' :: Char -> Parser ()
+char' c = whitespaces >> char c >> whitespaces >> return ()
+
+rtype :: Parser ASTInstruction
+rtype = do 
+    op <- symbol 
+    _  <- many1 whitespace
+    [rd, rs, rt] <- register `sepBy` char' ','
+    return $ AIRtype op rs rt rd
+
+itype :: Parser ASTInstruction
+itype = do 
+    op  <- symbol 
+    _   <- many1 whitespace 
+    rt  <- register
+    _   <- char' ','
+    imm <- immediate
+    _   <- char' '(' 
+    rs  <- register 
+    _   <- char' ')'
+    return $ AIItype op rs rt imm
+
+jtype :: Parser ASTInstruction
+jtype = do 
+    op   <- symbol
+    _    <- many1 whitespace
+    addr <- expr
+    return $ AIJtype op addr
+
+
+    
