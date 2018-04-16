@@ -15,9 +15,10 @@ data ASTExpr = AESym String
              deriving (Show, Eq)
 
 data ASTInstruction 
-    = AIRtype ASTExpr ASTExpr ASTExpr ASTExpr
-    | AIItype ASTExpr ASTExpr ASTExpr ASTExpr
-    | AIJtype ASTExpr ASTExpr
+    = AITen ASTExpr ASTExpr ASTExpr ASTExpr
+    | AIImm ASTExpr ASTExpr ASTExpr ASTExpr
+    | AIBin ASTExpr ASTExpr ASTExpr
+    | AIJmp ASTExpr ASTExpr
     deriving (Show, Eq)
 
 
@@ -60,31 +61,44 @@ expr = symbol <|> register <|> immediate
 char' :: Char -> Parser ()
 char' c = whitespaces >> char c >> whitespaces >> return ()
 
-rtype :: Parser ASTInstruction
-rtype = do 
-    op <- symbol 
+insTenary :: Parser ASTInstruction
+insTenary = do 
+    op <- expr 
     _  <- many1 whitespace
-    [rd, rs, rt] <- register `sepBy` char' ','
-    return $ AIRtype op rs rt rd
+    a0 <- expr 
+    _  <- char' ','
+    a1 <- expr 
+    _  <- char' ','
+    a2 <- expr 
+    return $ AITen op a0 a1 a2
 
-itype :: Parser ASTInstruction
-itype = do 
-    op  <- symbol 
+insBinary :: Parser ASTInstruction
+insBinary = do 
+    op <- expr 
+    _  <- many1 whitespace
+    a0 <- expr 
+    _  <- char' ','
+    a1 <- expr 
+    return $ AIBin op a0 a1
+
+insImmed :: Parser ASTInstruction
+insImmed = do 
+    op  <- expr 
     _   <- many1 whitespace 
-    rt  <- register
+    a0  <- expr
     _   <- char' ','
-    imm <- immediate
+    imm <- expr
     _   <- char' '(' 
-    rs  <- register 
+    a1  <- expr 
     _   <- char' ')'
-    return $ AIItype op rs rt imm
+    return $ AIImm op a0 imm a1
 
-jtype :: Parser ASTInstruction
-jtype = do 
-    op   <- symbol
+insJump :: Parser ASTInstruction
+insJump = do 
+    op   <- expr
     _    <- many1 whitespace
     addr <- expr
-    return $ AIJtype op addr
+    return $ AIJmp op addr
 
 
     
