@@ -1,6 +1,7 @@
 module Parser where 
 
 import Data.Char (isSpace)
+import Text.Parsec.Error (ParseError)
 import Text.Parsec.Number (decimal, int)
 import Text.ParserCombinators.Parsec (Parser)
 import Text.ParserCombinators.Parsec.Char (alphaNum, char, letter, satisfy)
@@ -133,9 +134,11 @@ lineLabelled = do
     _ <- char' '\n' 
     return $ ALLabelledInstruction label ins 
 
-line :: Parser ASTLine
-line = try lineLabelled <|> try lineLabel <|> lineInstruction
+mipsline :: Parser ASTLine
+mipsline = try lineLabelled <|> try lineLabel <|> lineInstruction
 
-lines :: Parser [ASTLine]
-lines = many line 
+mipslines :: Parser [ASTLine]
+mipslines = many mipsline 
 
+parseASM :: String -> Either ParseError [ASTLine]
+parseASM src = parse mipslines "mipskl" (removeComments src)
