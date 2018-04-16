@@ -2,17 +2,23 @@ module Parser where
 
 import Data.Char (isSpace)
 import Text.Parsec.Number (decimal, int)
-import Text.Parsec.Combinator (many1)
 import Text.ParserCombinators.Parsec (Parser)
 import Text.ParserCombinators.Parsec.Char (alphaNum, char, letter, satisfy)
+import Text.ParserCombinators.Parsec.Combinator (many1, sepBy)
 import Text.ParserCombinators.Parsec.Prim ((<|>), many, parse)
 import Util ((|>))
 
 
-data Expr = ESym String
-          | EReg String
-          | EImm Integer 
-          deriving (Show, Eq)
+data ASTExpr = AESym String
+             | AEReg String
+             | AEImm Integer 
+             deriving (Show, Eq)
+
+data ASTInstruction 
+    = AIRtype ASTExpr ASTExpr ASTExpr ASTExpr
+    | AIItype ASTExpr ASTExpr ASTExpr ASTExpr
+    | AIJtype ASTExpr ASTExpr
+    deriving (Show, Eq)
 
 
 removeComment :: String -> String 
@@ -30,22 +36,23 @@ whitespace = satisfy (\c -> isSpace 'c' && c /= '\n')
 whitespaces :: Parser String
 whitespaces = many whitespace
 
-symbol :: Parser Expr
+symbol :: Parser ASTExpr
 symbol = do 
     initial <- char '_' <|> letter
     rest <- many $ char '_' <|> alphaNum
-    return $ ESym (initial:rest)
+    return $ AESym (initial:rest)
 
-register :: Parser Expr 
+register :: Parser ASTExpr 
 register = do 
     char '$'
     dec <- many1 alphaNum
-    return $ EReg ('$':dec)
+    return $ AEReg ('$':dec)
 
-immediate :: Parser Expr 
+immediate :: Parser ASTExpr 
 immediate = do 
     imm <- int 
-    return $ EImm imm
+    return $ AEImm imm
 
-expr :: Parser Expr 
+expr :: Parser ASTExpr 
 expr = symbol <|> register <|> immediate 
+
