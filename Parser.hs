@@ -21,15 +21,21 @@ data ASTInstruction
     | AIJmp ASTExpr ASTExpr
     deriving (Show, Eq)
 
+data ASTLine
+    = ALLabel ASTExpr
+    | ALInstruction ASTInstruction
+    | ALLabelledInstruction ASTExpr ASTInstruction
+    deriving (Show, Eq)
 
 removeComment :: String -> String 
 removeComment = takeWhile (/= '#')
 
-removeComments :: String -> [String]
+removeComments :: String -> String
 removeComments src = src 
   |> lines 
   |> map removeComment
-  |> filter (\x -> dropWhile isSpace x == "") 
+  |> filter (\x -> dropWhile isSpace x /= "") 
+  |> unlines
 
 whitespace :: Parser Char
 whitespace = satisfy (\c -> isSpace c && c /= '\n')
@@ -64,7 +70,7 @@ char' c = whitespaces >> char c >> whitespaces >> return ()
 insTenary :: Parser ASTInstruction
 insTenary = do 
     op <- expr 
-    _  <- many1 whitespace
+    _  <- whitespaces
     a0 <- expr 
     _  <- char' ','
     a1 <- expr 
@@ -75,7 +81,7 @@ insTenary = do
 insBinary :: Parser ASTInstruction
 insBinary = do 
     op <- expr 
-    _  <- many1 whitespace
+    _  <- whitespaces
     a0 <- expr 
     _  <- char' ','
     a1 <- expr 
@@ -84,7 +90,7 @@ insBinary = do
 insOffset :: Parser ASTInstruction
 insOffset = do 
     op  <- expr 
-    _   <- many1 whitespace 
+    _   <- whitespaces 
     a0  <- expr
     _   <- char' ','
     imm <- expr
@@ -96,10 +102,40 @@ insOffset = do
 insJump :: Parser ASTInstruction
 insJump = do 
     op   <- expr
-    _    <- many1 whitespace
+    _    <- whitespaces
     addr <- expr
     return $ AIJmp op addr
 
 instruction :: Parser ASTInstruction
 instruction = try insTenary <|> try insOffset <|> try insBinary <|> insJump
+
+lineLabel :: Parser ASTLine
+lineLabel = do 
+    _ <- whitespaces 
+    label <- symbol
+    _ <- char' ':' 
+    _ <- char '\n'
+    return $ ALLabel label
+
+lineInstruction :: Parser ASTLine
+lineInstruction = do 
+    _ <- whitespaces 
+    ins <- instruction 
+    _ <- char' '\n' 
+    return $ ALInstruction ins 
+
+lineLabelled :: Parser ASTLine
+lineLabelled = do 
+    _ <- whitespaces 
+    label <- symbol 
+    _ <- char' ':' 
+    ins <- instruction
+    _ <- char' '\n' 
+    return $ ALLabelledInstruction label ins 
+
+line :: Parser ASTLine
+line = try lineLabelled <|> try lineLabel <|> lineInstruction
+
+lines :: Parser [ASTLine]
+lines = many line 
 
