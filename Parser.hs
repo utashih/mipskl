@@ -16,7 +16,7 @@ data ASTExpr = AESym String
 
 data ASTInstruction 
     = AITen ASTExpr ASTExpr ASTExpr ASTExpr
-    | AIImm ASTExpr ASTExpr ASTExpr ASTExpr
+    | AIOff ASTExpr ASTExpr ASTExpr ASTExpr
     | AIBin ASTExpr ASTExpr ASTExpr
     | AIJmp ASTExpr ASTExpr
     deriving (Show, Eq)
@@ -81,8 +81,8 @@ insBinary = do
     a1 <- expr 
     return $ AIBin op a0 a1
 
-insImmed :: Parser ASTInstruction
-insImmed = do 
+insOffset :: Parser ASTInstruction
+insOffset = do 
     op  <- expr 
     _   <- many1 whitespace 
     a0  <- expr
@@ -91,7 +91,7 @@ insImmed = do
     _   <- char' '(' 
     a1  <- expr 
     _   <- char' ')'
-    return $ AIImm op a0 imm a1
+    return $ AIOff op a0 imm a1
 
 insJump :: Parser ASTInstruction
 insJump = do 
@@ -100,5 +100,6 @@ insJump = do
     addr <- expr
     return $ AIJmp op addr
 
+instruction :: Parser ASTInstruction
+instruction = try insTenary <|> try insOffset <|> try insBinary <|> insJump
 
-    
