@@ -40,7 +40,7 @@ instance Show (MIPS a) where
     show m = unlines (zipWith (printf "%4d  %s") [(1::Int)..] (map wordHex (assemble m)))
     
 word :: Word32 -> MIPS ()
-word w = MIPS $ \addr -> ([w], addr + 1, ())
+word w = MIPS $ \addr -> ([w], addr + 4, ())
 
 label :: MIPS Address 
 label = MIPS $ \addr -> ([], addr, addr)
@@ -100,14 +100,14 @@ slti (Register rt) (Register rs) imm = word $ fromIntegral $
 beq :: Register -> Register -> Address -> MIPS ()
 beq (Register rs) (Register rt) label = MIPS $ \addr ->
     let imm = fromIntegral label - fromIntegral (addr + 1)
-        w = fromIntegral $ 0x04 `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. imm .&. 0xFFFF
-    in ([w], addr + 1, ())
+        w = fromIntegral $ 0x04 `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. (imm `shiftR` 2) .&. 0xFFFF
+    in ([w], addr + 4, ())
 
 bne :: Register -> Register -> Address -> MIPS ()
 bne (Register rs) (Register rt) label = MIPS $ \addr ->
     let imm = fromIntegral label - fromIntegral (addr + 1)
-        w = fromIntegral $ 0x05 `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. imm .&. 0xFFFF
-    in ([w], addr + 1, ())
+        w = fromIntegral $ 0x05 `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. (imm `shiftR` 2) .&. 0xFFFF
+    in ([w], addr + 4, ())
 
 program :: MIPS () 
 program = mdo 
