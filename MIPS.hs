@@ -9,6 +9,7 @@ import Prelude hiding (and, or)
 import Register (Register(..), zero, at, v0, v1, 
     a0, a1, a2, a3, t0, t1, t2, t3, t4, t5, t6, t7, s0, s1, 
     s2, s3, s4, s5, s6, s7, t8, t9, k0, k1, gp, sp, fp, ra)
+import Text.Printf (printf)
 import Util (wordHex)
 
 type Address = Word32
@@ -36,7 +37,7 @@ assemble m = bytecodes
     where (bytecodes, _, _) = runMIPS m 0x00000000
 
 instance Show (MIPS a) where 
-    show = unlines . map wordHex . assemble
+    show m = unlines (zipWith (printf "%4d  %s") [(1::Int)..] (map wordHex (assemble m)))
     
 word :: Word32 -> MIPS ()
 word w = MIPS $ \addr -> ([w], addr + 1, ())
@@ -96,8 +97,20 @@ slti :: Register -> Register -> Int -> MIPS ()
 slti (Register rt) (Register rs) imm = word $ fromIntegral $ 
     0x0a `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. imm .&. 0xFFFF
 
+beq :: Register -> Register -> Address -> MIPS ()
+beq (Register rs) (Register rt) label = MIPS $ \addr ->
+    let imm = fromIntegral label - fromIntegral (addr + 1)
+        w = fromIntegral $ 0x04 `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. imm .&. 0xFFFF
+    in ([w], addr + 1, ())
+
+bne :: Register -> Register -> Address -> MIPS ()
+bne (Register rs) (Register rt) label = MIPS $ \addr ->
+    let imm = fromIntegral label - fromIntegral (addr + 1)
+        w = fromIntegral $ 0x05 `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. imm .&. 0xFFFF
+    in ([w], addr + 1, ())
+
 program :: MIPS () 
-program = do 
+program = mdo 
     add t0 s0 v0 
     sub v1 t3 a1 
     and t2 a0 t1 
@@ -111,7 +124,6 @@ program = do
     lui ra 21
     slt s1 s2 s3 
     slti k0 zero (-1)
-    
-
-
-
+    start <- label 
+    beq t0 s0 start 
+    bne t1 s1 start
