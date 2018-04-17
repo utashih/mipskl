@@ -3,6 +3,7 @@
 module MIPS where 
 
 import Control.Monad (ap, liftM)
+import Control.Monad.Fix (MonadFix, mfix)
 import Data.Bits ((.&.), (.|.), shiftL, shiftR)
 import Data.Word (Word32)
 import Prelude hiding (and, or)
@@ -32,6 +33,11 @@ instance Monad MIPS where
         (byte1, addr1, val1) = runMIPS (b val0) addr0
         in (byte0 ++ byte1, addr1, val1)
 
+instance MonadFix MIPS where 
+    mfix f = MIPS $ \addr0 -> 
+        let (byte, addr1, val) = runMIPS (f val) addr0
+        in  (byte, addr1, val)
+        
 assemble :: MIPS a -> Program
 assemble m = bytecodes 
     where (bytecodes, _, _) = runMIPS m 0x00000000
@@ -124,6 +130,7 @@ program = mdo
     lui ra 21
     slt s1 s2 s3 
     slti k0 zero (-1)
-    start <- label 
     beq t0 s0 start 
     bne t1 s1 start
+    start <- label 
+    return ()
