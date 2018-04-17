@@ -127,24 +127,15 @@ jr :: Register -> MIPS ()
 jr (Register rs) = word $ fromIntegral $ 
     rs `shiftL` 21 .|. 0x08
 
-program :: MIPS () 
-program = mdo 
-    add t0 s0 v0 
-    sub v1 t3 a1 
-    and t2 a0 t1 
-    or  s1 zero s2 
-    addi s3 s4 (-123)
-    ori t4 t5 0x12
-    sll s5 s6 10
-    srl t6 t7 0x3
-    lw t8 20(s7)
-    sw t9 (-4)(sp)
-    lui ra 21
-    slt s1 s2 s3 
-    slti k0 zero (-1)
-    beq t0 s0 start 
-    bne t1 s1 start
-    start <- label 
-    j start
-    jal start
-    jr ra 
+program :: MIPS ()          --  example: calculate ($a0) * ($a1) + 100
+program = mdo   
+    add     t0 zero zero    --          add     $t0, $zero, $zero
+    loop <- label           --  loop:  
+    beq     a1 zero finish  --          beq     $a1, $zero, finish
+    add     t0 t0 a0        --          add     $t0, $t0, $a0
+    addi    a1 a1 (-1)      --          addi    $a1, $a1, -1
+    j       loop            --          j       loop
+    finish <- label         --  finish: 
+    addi    t0 t0 100       --          addi    $t0, $t0, 100
+    add     v0 t0 zero      --          add     $v0, $t0, $zero
+
