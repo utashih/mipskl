@@ -126,16 +126,3 @@ jal label = word $ fromIntegral $
 jr :: Register -> MIPS ()
 jr (Register rs) = word $ fromIntegral $ 
     rs `shiftL` 21 .|. 0x08
-
-program :: MIPS ()          --  example: calculate ($a0) * ($a1) + 100
-program = mdo   
-    add     t0 zero zero    --          add     $t0, $zero, $zero
-    loop <- label           --  loop:  
-    beq     a1 zero finish  --          beq     $a1, $zero, finish
-    add     t0 t0 a0        --          add     $t0, $t0, $a0
-    addi    a1 a1 (-1)      --          addi    $a1, $a1, -1
-    j       loop            --          j       loop
-    finish <- label         --  finish: 
-    addi    t0 t0 100       --          addi    $t0, $t0, 100
-    add     v0 t0 zero      --          add     $v0, $t0, $zero
-
