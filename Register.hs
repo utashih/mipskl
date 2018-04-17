@@ -49,3 +49,36 @@ register ('$':name) = do
             guard (show idx == name)
             ret idx
 register _ = Nothing
+
+zero = Register 0
+at   = Register 1
+v0   = Register 2
+v1   = Register 3
+a0   = Register 4
+a1   = Register 5
+a2   = Register 6
+a3   = Register 7
+t0   = Register 8
+t1   = Register 9
+t2   = Register 10
+t3   = Register 11
+t4   = Register 12
+t5   = Register 13
+t6   = Register 14
+t7   = Register 15
+s0   = Register 16
+s1   = Register 17
+s2   = Register 18
+s3   = Register 19
+s4   = Register 20
+s5   = Register 21
+s6   = Register 22
+s7   = Register 23
+t8   = Register 24
+t9   = Register 25
+k0   = Register 26
+k1   = Register 27
+gp   = Register 28
+sp   = Register 29
+fp   = Register 30
+ra   = Register 31
