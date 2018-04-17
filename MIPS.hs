@@ -115,6 +115,18 @@ bne (Register rs) (Register rt) label = MIPS $ \addr ->
         w = fromIntegral $ 0x05 `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. (imm `shiftR` 2) .&. 0xFFFF
     in ([w], addr + 4, ())
 
+j :: Address -> MIPS ()
+j label = word $ fromIntegral $
+    0x02 `shiftL` 26 .|. (label `shiftR` 2) .&. 0x03FFFFFF
+
+jal :: Address -> MIPS ()
+jal label = word $ fromIntegral $
+    0x03 `shiftL` 26 .|. (label `shiftR` 2) .&. 0x03FFFFFF
+
+jr :: Register -> MIPS ()
+jr (Register rs) = word $ fromIntegral $ 
+    rs `shiftL` 21 .|. 0x08
+
 program :: MIPS () 
 program = mdo 
     add t0 s0 v0 
@@ -133,4 +145,6 @@ program = mdo
     beq t0 s0 start 
     bne t1 s1 start
     start <- label 
-    return ()
+    j start
+    jal start
+    jr ra 
