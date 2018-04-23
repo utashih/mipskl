@@ -4,7 +4,7 @@ import Control.Monad (guard)
 import Data.Char (toLower)
 import Text.Read (readMaybe)
 
-newtype Register = Register Int deriving (Show, Eq)
+newtype Register = Register Int deriving (Eq)
 
 register :: String -> Maybe Register
 register ('$':name) = do
@@ -49,6 +49,43 @@ register ('$':name) = do
             guard (show idx == name)
             ret idx
 register _ = Nothing
+
+instance Show Register where 
+    show (Register idx) = case idx of 
+        0  -> "$zero"
+        1  -> "$at"
+        2  -> "$v0"
+        3  -> "$v1"
+        4  -> "$a0" 
+        5  -> "$a1"
+        6  -> "$a2"
+        7  -> "$a3"
+        8  -> "$t0"
+        9  -> "$t1"
+        10 -> "$t2"
+        11 -> "$t3"
+        12 -> "$t4"
+        13 -> "$t5"
+        14 -> "$t6"
+        15 -> "$t7"
+        16 -> "$s0"
+        17 -> "$s1"
+        18 -> "$s2"
+        19 -> "$s3"
+        20 -> "$s4"
+        21 -> "$s5"
+        22 -> "$s6"
+        23 -> "$s7"
+        24 -> "$t8"
+        25 -> "$t9"
+        26 -> "$k0"
+        27 -> "$k1"
+        28 -> "$gp"
+        29 -> "$sp"
+        30 -> "$fp"
+        31 -> "$ra"
+        _  -> "$WrongRegisterIndex"
+
 
 zero, at, v0, v1, a0, a1, a2, a3 :: Register
 t0, t1, t2, t3, t4, t5, t6, t7 :: Register
