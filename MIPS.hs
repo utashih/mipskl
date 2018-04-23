@@ -105,13 +105,13 @@ slti (Register rt) (Register rs) imm = word $ fromIntegral $
 
 beq :: Register -> Register -> Address -> MIPS ()
 beq (Register rs) (Register rt) label = MIPS $ \addr ->
-    let imm = fromIntegral label - fromIntegral (addr + 1)
+    let imm = fromIntegral label - fromIntegral (addr + 4)
         w = fromIntegral $ 0x04 `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. (imm `shiftR` 2) .&. 0xFFFF
     in ([w], addr + 4, ())
 
 bne :: Register -> Register -> Address -> MIPS ()
 bne (Register rs) (Register rt) label = MIPS $ \addr ->
-    let imm = fromIntegral label - fromIntegral (addr + 1)
+    let imm = fromIntegral label - fromIntegral (addr + 4)
         w = fromIntegral $ 0x05 `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. (imm `shiftR` 2) .&. 0xFFFF
     in ([w], addr + 4, ())
 
