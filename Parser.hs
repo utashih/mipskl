@@ -140,5 +140,7 @@ mipsline = try lineLabelled <|> try lineLabel <|> lineInstruction
 mipslines :: Parser [ASTLine]
 mipslines = many mipsline 
 
-parseASM :: String -> Either ParseError [ASTLine]
-parseASM src = parse mipslines "mipskl" (removeComments src)
+parseASM :: String -> Either String [ASTLine]
+parseASM src = case parse mipslines "mipskl" (removeComments src) of 
+    Left error -> Left $ show error
+    Right lns  -> Right lns
