@@ -1,7 +1,9 @@
 module Assembler where 
 
+import Control.Monad (forM_)    
 import Parser (ASTExpr(..), ASTInstruction(..), ASTLine(..), parseASM)
 import Register (Register(..), register)
+import Text.Printf (printf)
 
 data Instruction
     = RIns Opcode Register Register Register Shamt Funct
@@ -95,6 +97,82 @@ mnemonicToFunct mnemonic = case mnemonic of
     _       -> -1
 
 encode :: ASTInstruction -> Either String Instruction
-encode (AITen (AESym mnemonic) (AESym rs) (AESym rt) (AESym rd))
-    = rIns (mnemonicToOpcode mnemonic) rs rt rd 0 0
+encode (AITen (AESym mnemonic) (AEReg rs) (AEReg rt) (AEReg rd)) = 
+    let opcode = mnemonicToOpcode mnemonic
+        funct = mnemonicToFunct mnemonic
+    in case mnemonic of 
+        "add"   -> rIns opcode rs rt rd 0 funct
+        "sub"   -> rIns opcode rs rt rd 0 funct
+        "and"   -> rIns opcode rs rt rd 0 funct
+        "or"    -> rIns opcode rs rt rd 0 funct
+        "slt"   -> rIns opcode rs rt rd 0 funct
+        _       -> Left $ "Unsupported mnemonic: " ++ mnemonic
+encode (AITen (AESym mnemonic) (AEReg rs) (AEReg rt) (AEImm immed)) =
+    let opcode = mnemonicToOpcode mnemonic
+    in case mnemonic of 
+        "addi"  -> iIns opcode rs rt immed
+        "ori"   -> iIns opcode rs rt immed 
+        "sll"   -> rIns opcode rs rt "$zero" immed 0 
+        "srl"   -> Left "Unsup: srl"
+        "slti"  -> Left "Unsup: slti"
+encode (AITen (AESym mnemonic) (AEReg rs) (AEReg rt) (AESym label)) = 
+    let opcode = mnemonicToOpcode mnemonic
+    in case mnemonic of  
+        "beq"   -> Left "Unsup: beq"
+        "bne"   -> Left "Unsup: bne"
+encode (AIOff (AESym mnemonic) (AEReg rs) (AEImm immed) (AEReg rt)) = 
+    let opcode = mnemonicToOpcode mnemonic
+    in case mnemonic of 
+        "lw"    -> Left "Unsup: lw"
+        "sw"    -> Left "Unsup: sw"
+encode (AIBin (AESym mnemonic) (AEReg rs) (AEImm immed)) = 
+    let opcode = mnemonicToOpcode mnemonic
+    in case mnemonic of 
+        "lui"   -> Left "Unsup: lui"
+encode (AIJmp (AESym mnemonic) (AESym label)) =
+    let opcode = mnemonicToOpcode mnemonic
+    in case mnemonic of 
+        "j"     -> Left "Unsup: j"
+        "jal"   -> Left "Unsup: j"
+encode (AIJmp (AESym mnemonic) (AEReg rs)) =
+    let opcode = mnemonicToOpcode mnemonic
+    in case mnemonic of 
+        "jr"    -> Left "Unsup: jr"
+encode _ = Left "Ill-formatted line"
+
+--test :: String -> Either String Instruction
+test src = 
+    let Right (ALInstruction ins:_) = parseASM src
+    in  encode ins
+
+testcases :: [String]
+testcases = [
+    "add $t0, $s0, $v0",
+    "sub $v1, $t3, $a1",
+    "and $t2, $a0, $t1",
+    "or  $s1, $zero, $s2",
+    "addi $s3, $s4, -123",
+    "ori $t4, $t5, 0x12",
+    "sll $s5, $s6, 10",
+    "srl $t6, $t7, 0x3",
+    "lw $t8, 20($s7)",
+    "sw $t9, -4($sp)",
+    "lui $ra, 21",
+    "slt $s1, $s2, $s3",
+    "slti $k0, $zero, -1",
+    "beq $t0, $s0, start",
+    "bne $t1, $s1, start",
+    "j start",
+    "jal start",
+    "jr $ra"]
+
+
+
+runTest :: IO ()
+runTest = do 
+    putStrLn "Running Tests"
+    forM_ (zip [(1::Integer)..] testcases)  $ \(no, src) -> do 
+        printf "%2d " no
+        print $ test src
+
 
