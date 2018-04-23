@@ -1,9 +1,12 @@
 module Assembler where 
 
-import Control.Monad (forM_)    
+import Control.Monad (forM_)   
+import Data.Bits ((.&.), (.|.), shiftL, shiftR) 
+import Data.Word (Word32)
 import Parser (ASTExpr(..), ASTInstruction(..), ASTLine(..), parseASM)
 import Register (Register(..), register)
 import Text.Printf (printf)
+import Util (wordHex)
 
 data Instruction
     = RIns Opcode Register Register Register Shamt Funct
@@ -39,11 +42,11 @@ iIns opcode srs srt immed =
         return (rs, rt)
     in case mregs of 
         Nothing       -> Left "Wrong register"
-        Just (rs, rt) -> Right $ IIns opcode rs rt immed
+        Just (rs, rt) -> Right $ IIns opcode rs rt (immed .&. 0xFFFF)
 
 jIns :: Integer -> Integer -> Either String Instruction 
 jIns opcode _ | opcode < 0 || opcode >= 2^6 = Left $ show opcode ++ " cannot be opcode"
-jIns opcode addr = Right $ JIns opcode addr
+jIns opcode addr = Right $ JIns opcode (addr .&. 0x03FFFFFF)
 
 mnemonicToOpcode :: String -> Integer 
 mnemonicToOpcode mnemonic = case mnemonic of 
@@ -96,8 +99,8 @@ mnemonicToFunct mnemonic = case mnemonic of
     "subu"  -> 0x23
     _       -> -1
 
-encode :: ASTInstruction -> Either String Instruction
-encode (AITen (AESym mnemonic) (AEReg rs) (AEReg rt) (AEReg rd)) = 
+assemble :: ASTInstruction -> Either String Instruction
+assemble (AITen (AESym mnemonic) (AEReg rd) (AEReg rs) (AEReg rt)) = 
     let opcode = mnemonicToOpcode mnemonic
         funct = mnemonicToFunct mnemonic
     in case mnemonic of 
@@ -106,44 +109,76 @@ encode (AITen (AESym mnemonic) (AEReg rs) (AEReg rt) (AEReg rd)) =
         "and"   -> rIns opcode rs rt rd 0 funct
         "or"    -> rIns opcode rs rt rd 0 funct
         "slt"   -> rIns opcode rs rt rd 0 funct
-        _       -> Left $ "Unsupported mnemonic: " ++ mnemonic
-encode (AITen (AESym mnemonic) (AEReg rs) (AEReg rt) (AEImm immed)) =
+        _       -> Left $ "Unsupported mnemonic: <" ++ mnemonic ++ ">"
+assemble (AITen (AESym mnemonic) (AEReg rt) (AEReg rs) (AEImm immed)) =
     let opcode = mnemonicToOpcode mnemonic
+        funct = mnemonicToFunct mnemonic
     in case mnemonic of 
         "addi"  -> iIns opcode rs rt immed
         "ori"   -> iIns opcode rs rt immed 
-        "sll"   -> rIns opcode rs rt "$zero" immed 0 
-        "srl"   -> Left "Unsup: srl"
-        "slti"  -> Left "Unsup: slti"
-encode (AITen (AESym mnemonic) (AEReg rs) (AEReg rt) (AESym label)) = 
+        "sll"   -> rIns opcode "$zero" rs rt immed funct
+        "srl"   -> rIns opcode "$zero" rs rt immed funct
+        "slti"  -> iIns opcode rs rt immed 
+        _       -> Left $ "Unsupported mnemonic: <" ++ mnemonic ++ ">"
+assemble (AITen (AESym mnemonic) (AEReg rs) (AEReg rt) (AESym label)) = 
     let opcode = mnemonicToOpcode mnemonic
     in case mnemonic of  
-        "beq"   -> Left "Unsup: beq"
-        "bne"   -> Left "Unsup: bne"
-encode (AIOff (AESym mnemonic) (AEReg rs) (AEImm immed) (AEReg rt)) = 
+        "beq"   -> Left "Unsupported mnemonic: <beq>"
+        "bne"   -> Left "Unsupported mnemonic: <bne>"
+        _       -> Left $ "Unsupported mnemonic: <" ++ mnemonic ++ ">"
+assemble (AIOff (AESym mnemonic) (AEReg rt) (AEImm immed) (AEReg rs)) = 
     let opcode = mnemonicToOpcode mnemonic
     in case mnemonic of 
-        "lw"    -> Left "Unsup: lw"
-        "sw"    -> Left "Unsup: sw"
-encode (AIBin (AESym mnemonic) (AEReg rs) (AEImm immed)) = 
+        "lw"    -> iIns opcode rs rt immed 
+        "sw"    -> iIns opcode rs rt immed 
+        _       -> Left $ "Unsupported mnemonic: <" ++ mnemonic ++ ">"
+assemble (AIBin (AESym mnemonic) (AEReg rt) (AEImm immed)) = 
     let opcode = mnemonicToOpcode mnemonic
     in case mnemonic of 
-        "lui"   -> Left "Unsup: lui"
-encode (AIJmp (AESym mnemonic) (AESym label)) =
+        "lui"   -> iIns opcode "$zero" rt immed 
+        _       -> Left $ "Unsupported mnemonic: <" ++ mnemonic ++ ">"
+assemble (AIJmp (AESym mnemonic) (AESym label)) =
     let opcode = mnemonicToOpcode mnemonic
     in case mnemonic of 
-        "j"     -> Left "Unsup: j"
-        "jal"   -> Left "Unsup: j"
-encode (AIJmp (AESym mnemonic) (AEReg rs)) =
+        "j"     -> Left "Unsupported mnemonic: <j>"
+        "jal"   -> Left "Unsupported mnemonic: <jal>"
+        _       -> Left $ "Unsupported mnemonic: <" ++ mnemonic ++ ">"
+assemble (AIJmp (AESym mnemonic) (AEReg rs)) =
     let opcode = mnemonicToOpcode mnemonic
+        funct = mnemonicToFunct mnemonic
     in case mnemonic of 
-        "jr"    -> Left "Unsup: jr"
-encode _ = Left "Ill-formatted line"
+        "jr"    -> rIns opcode rs "$zero" "$zero" 0 funct
+        _       -> Left $ "Unsupported mnemonic: <" ++ mnemonic ++ ">"
+assemble _ = Left "Ill-formatted instruction"
 
---test :: String -> Either String Instruction
+
+bytecode :: Instruction -> Word32
+bytecode (RIns opcode (Register rs) (Register rt) (Register rd) shamt funct) = 
+    fromIntegral 
+         $  opcode `shiftL` 26 
+        .|. rs `shiftL` 21 
+        .|. rt `shiftL` 16 
+        .|. rd `shiftL` 11 
+        .|. shamt `shiftL` 6 
+        .|. funct
+bytecode (IIns opcode (Register rs) (Register rt) immed) = 
+    fromIntegral
+         $  opcode `shiftL` 26
+        .|. rs `shiftL` 21
+        .|. rt `shiftL` 16
+        .|. immed 
+bytecode (JIns opcode immed) = 
+    fromIntegral
+         $ opcode `shiftL` 26
+        .|. immed 
+
+test :: String -> Either String Instruction
 test src = 
     let Right (ALInstruction ins:_) = parseASM src
-    in  encode ins
+    in  assemble ins
+
+test2 :: Instruction -> (Instruction, String)
+test2 ins = (ins, wordHex $ bytecode ins)
 
 testcases :: [String]
 testcases = [
@@ -173,6 +208,6 @@ runTest = do
     putStrLn "Running Tests"
     forM_ (zip [(1::Integer)..] testcases)  $ \(no, src) -> do 
         printf "%2d " no
-        print $ test src
+        print $ test2 <$> test src
 
 

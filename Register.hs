@@ -87,7 +87,7 @@ idxToName idx = case idx of
     _  -> "$WrongRegisterIndex"
 
 instance Show Register where 
-    show (Register idx) = idxToName idx ++ show [idx]
+    show (Register idx) = idxToName idx -- ++ show [idx]
 
 zero, at, v0, v1, a0, a1, a2, a3 :: Register
 t0, t1, t2, t3, t4, t5, t6, t7 :: Register
