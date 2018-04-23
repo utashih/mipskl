@@ -8,3 +8,6 @@ x |> f = f x
 
 wordHex :: Word32 -> String
 wordHex = printf "%08x" 
+
+partialSum :: Num a => [a] -> [a]
+partialSum = scanl (+) 0
