@@ -67,31 +67,31 @@ or :: Register -> Register -> Register -> MIPS ()
 or (Register rd) (Register rs) (Register rt) = word $ fromIntegral $ 
     rs `shiftL` 21 .|. rt `shiftL` 16 .|. rd `shiftL` 11 .|. 0x25
 
-addi :: Register -> Register -> Int -> MIPS ()
+addi :: Register -> Register -> Integer -> MIPS ()
 addi (Register rt) (Register rs) imm = word $ fromIntegral $ 
     0x08 `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. imm .&. 0xFFFF
 
-ori :: Register -> Register -> Int -> MIPS ()
+ori :: Register -> Register -> Integer -> MIPS ()
 ori (Register rt) (Register rs) imm = word $ fromIntegral $ 
     0x0d `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. imm .&. 0xFFFF
 
-sll :: Register -> Register -> Int -> MIPS ()
+sll :: Register -> Register -> Integer -> MIPS ()
 sll (Register rd) (Register rt) shamt = word $ fromIntegral $ 
     rt `shiftL` 16 .|. rd `shiftL` 11 .|. shamt `shiftL` 6 .|. 0x00
 
-srl :: Register -> Register -> Int -> MIPS ()
+srl :: Register -> Register -> Integer -> MIPS ()
 srl (Register rd) (Register rt) shamt = word $ fromIntegral $ 
     rt `shiftL` 16 .|. rd `shiftL` 11 .|. shamt `shiftL` 6 .|. 0x02
 
-lw :: Register -> Int -> Register -> MIPS ()
+lw :: Register -> Integer -> Register -> MIPS ()
 lw (Register rt) imm (Register rs) = word $ fromIntegral $
     0x23 `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. imm .&. 0xFFFF
 
-sw :: Register -> Int -> Register -> MIPS ()
+sw :: Register -> Integer -> Register -> MIPS ()
 sw (Register rt) imm (Register rs) = word $ fromIntegral $
     0x2b `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. imm .&. 0xFFFF
     
-lui :: Register -> Int -> MIPS () 
+lui :: Register -> Integer -> MIPS () 
 lui (Register rt) imm = word $ fromIntegral $
     0x0f `shiftL` 26 .|. rt `shiftL` 16 .|. imm .&. 0xFFFF
 
@@ -99,7 +99,7 @@ slt :: Register -> Register -> Register -> MIPS ()
 slt (Register rd) (Register rs) (Register rt) = word $ fromIntegral $ 
     rs `shiftL` 21 .|. rt `shiftL` 16 .|. rd `shiftL` 11 .|. 0x2a
 
-slti :: Register -> Register -> Int -> MIPS ()
+slti :: Register -> Register -> Integer -> MIPS ()
 slti (Register rt) (Register rs) imm = word $ fromIntegral $ 
     0x0a `shiftL` 26 .|. rs `shiftL` 21 .|. rt `shiftL` 16 .|. imm .&. 0xFFFF
 
