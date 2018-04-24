@@ -3,7 +3,8 @@ module Assembler where
 
 import Control.Monad (forM, forM_, mapM)
 import Data.Composition ((.:), (.:.))
-import Data.Maybe (mapMaybe)
+import Data.List (genericLength)
+import Data.Maybe (catMaybes, mapMaybe, maybeToList)
 import Instruction (Instruction(..), rIns, iIns, jIns, 
                     mnemonicToOpcode, mnemonicToFunct, bytecode)
 import Parser (ASTExpr(..), ASTInstruction(..), ASTLine(..), parseASM)
@@ -22,18 +23,18 @@ extractInstruction line = case line of
 extractLabel :: ASTLine -> Maybe String 
 extractLabel line = case line of 
     ALLabel (AESym label) -> Just label 
-    ALLabelledInstruction (AESym label) -> Just label 
+    ALLabelledInstruction (AESym label) _ -> Just label 
     ALInstruction _ -> Nothing
 
 
 assemble :: [ASTLine] -> Either String [Instruction]
 assemble lines = mdo 
-    st <- makeSymbolTable ins lines 
-    ins <- 
+    let st = makeSymbolTable ins  
+    ins <- assembledoit st ins
     return $ concat ins 
     where 
         lineno :: [[Instruction]] -> [Integer]
-        lineno ins = partialSum (map length ins)
+        lineno ins = partialSum (map genericLength ins)
 
         makeSymbolTable :: [[Instruction]] -> SymbolTable
         makeSymbolTable ins = mapMaybe correspond (zip lines (lineno ins))
@@ -42,27 +43,84 @@ assemble lines = mdo
                 correspond (line, no) = do 
                     label <- extractLabel line 
                     return (label, no)
-                
+
+        assembledoit :: SymbolTable -> [[Instruction]] -> Either String [[Instruction]]
+        assembledoit st ins = sequence foo 
+            where 
+                aInss :: [Maybe ASTInstruction]
+                aInss = map extractInstruction lines 
+
+                foo :: [Either String [Instruction]]
+                foo = catMaybes (zipWith f (lineno ins) aInss)
+                    where 
+                        f no mains = assembleInstructions st no <$> mains
+            
         assembleInstructions :: SymbolTable -> Integer -> ASTInstruction -> Either String [Instruction]
         assembleInstructions = sequence .:. assembleInstruction
         
         assembleInstruction :: SymbolTable -> Integer -> ASTInstruction -> [Either String Instruction]
         assembleInstruction st no aIns = case aIns of 
-            AITen (AESym mnemonic) _ _ _ -> 
+            AITen (AESym mnemonic) (AEReg rd) (AEReg rs) (AEReg rt) -> 
                 let opcode = mnemonicToOpcode mnemonic
+                    funct = mnemonicToFunct mnemonic
                 in case mnemonic of 
                     "add"   -> [rIns opcode rs rt rd 0 funct]
+                    "sub"   -> [rIns opcode rs rt rd 0 funct]
+                    "and"   -> [rIns opcode rs rt rd 0 funct]
+                    "or"    -> [rIns opcode rs rt rd 0 funct]
+                    "slt"   -> [rIns opcode rs rt rd 0 funct]
+                    _       -> [Left $ "Unsupported tenary mnemonic: <" ++ mnemonic ++ ">"]
+            AITen (AESym mnemonic) (AEReg rt) (AEReg rs) (AEImm immed) ->
+                let opcode = mnemonicToOpcode mnemonic
+                    funct = mnemonicToFunct mnemonic
+                in case mnemonic of 
+                    "addi"  -> [iIns opcode rs rt immed]
+                    "ori"   -> [iIns opcode rs rt immed]
+                    "sll"   -> [rIns opcode "$zero" rs rt immed funct]
+                    "srl"   -> [rIns opcode "$zero" rs rt immed funct]
+                    "slti"  -> [iIns opcode rs rt immed]
+                    _       -> [Left $ "Unsupported tenary mnemonic: <" ++ mnemonic ++ ">"]
+            AITen (AESym mnemonic) (AEReg rs) (AEReg rt) (AESym label) ->
+                let opcode = mnemonicToOpcode mnemonic
+                in case mnemonic of  
+                    "beq"   -> [Left "Unsupported mnemonic: <beq>"]
+                    "bne"   -> [Left "Unsupported mnemonic: <bne>"]
+                    _       -> [Left $ "Unsupported tenary mnemonic: <" ++ mnemonic ++ ">"]
+            AIOff (AESym mnemonic) (AEReg rt) (AEImm immed) (AEReg rs) ->
+                let opcode = mnemonicToOpcode mnemonic
+                in case mnemonic of 
+                    "lw"    -> [iIns opcode rs rt immed]
+                    "sw"    -> [iIns opcode rs rt immed]
+                    _       -> [Left $ "Unsupported mnemonic with offset: <" ++ mnemonic ++ ">"]
+            AIBin (AESym mnemonic) (AEReg rt) (AEImm immed) ->
+                let opcode = mnemonicToOpcode mnemonic
+                in case mnemonic of 
+                    "lui"   -> [iIns opcode "$zero" rt immed]
+                    _       -> [Left $ "Unsupported binary mnemonic: <" ++ mnemonic ++ ">"]
+            AIJmp (AESym mnemonic) (AESym label) ->
+                let opcode = mnemonicToOpcode mnemonic
+                in case mnemonic of 
+                    "j"     -> [Left "Unsupported mnemonic: <j>"]
+                    "jal"   -> [Left "Unsupported mnemonic: <jal>"]
+                    _       -> [Left $ "Unsupported unary mnemonic: <" ++ mnemonic ++ ">"]
+            AIJmp (AESym mnemonic) (AEReg rs) ->
+                let opcode = mnemonicToOpcode mnemonic
+                    funct = mnemonicToFunct mnemonic
+                in case mnemonic of 
+                    "jr"    -> [rIns opcode rs "$zero" "$zero" 0 funct]
+                    _       -> [Left $ "Unsupported unary mnemonic: <" ++ mnemonic ++ ">"]
+            _ -> [Left "Ill-formatted instruction"]
         
         
 
-
+{-
 assemble1 :: [ASTLine] -> Either String [Instruction]
 assemble1 lhs = mdo 
     st <- makeSymbolTable st ins lhs
     ins <- mapM (assembles st) (extractIns lhs)
     return $ concat ins
     where 
-        makeSymbolTable :: SymbolTable -> [Instructions] -> [ASTLine] -> Either String SymbolTable
+        makeSymbolTable :: SymbolTable -> [[Instruction]] -> [ASTLine] -> Either String SymbolTable
         makeSymbolTable st ins lns = do 
             linenos <- lineno lns 
             return $ traverseLines (zip lns linenos)
@@ -148,7 +206,7 @@ assemble1 lhs = mdo
         assemble st _ = [Left "Ill-formatted instruction"]
 
 
-{-
+
 test :: String -> Either String [Instruction]
 test src = 
     let Right (ALInstruction ins:_) = parseASM src
