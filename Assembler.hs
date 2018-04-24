@@ -12,22 +12,58 @@ import Util (partialSum, wordHex)
 
 type SymbolTable = [(String, Integer)]
 
-extractIns :: [ASTLine] -> [ASTInstruction]
-extractIns = mapMaybe extractInsPerLine where 
-    extractInsPerLine :: ASTLine -> Maybe ASTInstruction
-    extractInsPerLine line = case line of 
-        ALInstruction ins -> Just ins
-        ALLabelledInstruction _ ins -> Just ins
-        ALLabel _ -> Nothing
+
+extractInstruction :: ASTLine -> Maybe ASTInstruction
+extractInstruction line = case line of 
+    ALInstruction ins -> Just ins
+    ALLabelledInstruction _ ins -> Just ins
+    ALLabel _ -> Nothing
+
+extractLabel :: ASTLine -> Maybe String 
+extractLabel line = case line of 
+    ALLabel (AESym label) -> Just label 
+    ALLabelledInstruction (AESym label) -> Just label 
+    ALInstruction _ -> Nothing
+
 
 assemble :: [ASTLine] -> Either String [Instruction]
-assemble lhs = mdo 
-    st <- makeSymbolTable st lhs
+assemble lines = mdo 
+    st <- makeSymbolTable ins lines 
+    ins <- 
+    return $ concat ins 
+    where 
+        lineno :: [[Instruction]] -> [Integer]
+        lineno ins = partialSum (map length ins)
+
+        makeSymbolTable :: [[Instruction]] -> SymbolTable
+        makeSymbolTable ins = mapMaybe correspond (zip lines (lineno ins))
+            where
+                correspond :: (ASTLine, Integer) -> Maybe (String, Integer)
+                correspond (line, no) = do 
+                    label <- extractLabel line 
+                    return (label, no)
+                
+        assembleInstructions :: SymbolTable -> Integer -> ASTInstruction -> Either String [Instruction]
+        assembleInstructions = sequence .:. assembleInstruction
+        
+        assembleInstruction :: SymbolTable -> Integer -> ASTInstruction -> [Either String Instruction]
+        assembleInstruction st no aIns = case aIns of 
+            AITen (AESym mnemonic) _ _ _ -> 
+                let opcode = mnemonicToOpcode mnemonic
+                in case mnemonic of 
+                    "add"   -> [rIns opcode rs rt rd 0 funct]
+        
+        
+
+
+assemble1 :: [ASTLine] -> Either String [Instruction]
+assemble1 lhs = mdo 
+    st <- makeSymbolTable st ins lhs
     ins <- mapM (assembles st) (extractIns lhs)
     return $ concat ins
     where 
-        makeSymbolTable :: SymbolTable -> [ASTLine] -> Either String SymbolTable
-        makeSymbolTable st lns = do
+        makeSymbolTable :: SymbolTable -> [Instructions] -> [ASTLine] -> Either String SymbolTable
+        makeSymbolTable st ins lns = do 
             linenos <- lineno lns 
             return $ traverseLines (zip lns linenos)
             where 
