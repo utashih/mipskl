@@ -1,8 +1,45 @@
 # mipskl
+### Introduction
++ A toy MIPS assembler written in Haskell
++ Using MonadTardis (see [tardis](https://hackage.haskell.org/package/tardis-0.4.1.0) and this [article](http://kcsongor.github.io/time-travel-in-haskell-for-dummies/) by Csongor Kiss)
++ Designed for the course Computer Organization at Zhejiang University
+### Usage
+Given a file `test.asm`,
+```mips
+    add     $t0, $zero, $zero
+loop:  
+    beq     $a1, $zero, finish
+    add     $t0, $t0, $a0
+    addi    $a1, $a1, -1
+    j       loop
+finish: 
+    addi    $t0, $t0, 100
+    add     $v0, $t0, $zero
+```
+it generates the following COE file `test.coe`:
+```
+./Main test.asm test.coe
+```
+```
+memory_initialization_radix=16; 
+memory_initialization_vector=
+00004020,
+10a00003,
+01044020,
+20a5ffff,
+08000001,
+21080064,
+01001020;
+```
+which can then be imported by Xilinx ISE for synthesis.
 
-A toy MIPS assembler written in Haskell
+It now supports `add`, `addu`, `sub`, `subu`, `and`, `or`, `addi`, `addiu`, `andi`, `ori`, `sll`, `srl`, `lbu`, `lhu`, `lw`, `sb`, `sh`, `sw`, `lui`, `move`, `slt`, `slti`, `sltu`, `sltiu`, `beq`, `bne`, `blt`, `j`, `jal`, and `jr`. 
 
-So far please see [MIPS.hs](MIPS.hs) (not an assembler yet). An examle is listed as follows.
+
+---
+
+See also [MIPS.hs](MIPS.hs) (a monadic EDSL for MIPS assembly). 
+An example is listed as follows.
 
 ```Haskell
 program :: MIPS ()          --  example: calculate ($a0) * ($a1) + 100
