@@ -2,7 +2,7 @@
 module Assembler where 
 
 import Control.Monad (forM, forM_, mapM)
-import Control.Monad.Tardis (Tardis)
+import Control.Monad.Tardis --(Tardis, runTardis)
 import Data.Composition ((.:), (.:.))
 import Data.List (genericLength)
 import Data.Maybe (catMaybes, mapMaybe, maybeToList)
@@ -11,28 +11,42 @@ import Instruction (Instruction(..), rIns, iIns, jIns,
 import Parser (ASTExpr(..), ASTInstruction(..), ASTStatement(..), parseASM)
 import Text.Printf (printf)
 import Util (partialSum, wordHex)
+import qualified Data.Map.Strict as M 
 
-type SymbolTable = [(String, Integer)]
+type Address = Integer
+type SymbolTable = M.Map String Address
 type Assembler a = Tardis SymbolTable SymbolTable a
 
 extractInstruction :: ASTStatement -> Maybe ASTInstruction
 extractInstruction stmt = case stmt of 
-    ALInstruction ins -> Just ins
-    ALLabelledInstruction _ ins -> Just ins
-    ALLabel _ -> Nothing
+    ASInstruction ins -> Just ins
+    ASLabelledInstruction _ ins -> Just ins
+    ASLabel _ -> Nothing
 
 extractLabel :: ASTStatement -> Maybe String 
 extractLabel stmt = case stmt of 
-    ALLabel (AESym label) -> Just label 
-    ALLabelledInstruction (AESym label) _ -> Just label 
-    ALInstruction _ -> Nothing
+    ASLabel (AESym label) -> Just label 
+    ASLabelledInstruction (AESym label) _ -> Just label 
+    ASInstruction _ -> Nothing
 
 
 assemble :: [ASTStatement] -> Either String [Instruction]
-assemble stmts = mdo 
-    ins <- assembledoit (makeSymbolTable ins) ins
-    return $ concat ins 
+assemble stmts = assembled
     where 
+        assembled :: Either String [Instruction]
+        assembled = instructions where
+            (instructions, _) = runTardis (assembleInstructions 0 stmts) (M.empty, M.empty)
+        
+        assembleInstructions :: Address -> [ASTStatement] -> Assembler (Either String [Instruction]) 
+        assembleInstructions _ [] = return (Right [])
+        assembleInstructions addr (stmt : stmts) = case stmt of 
+            ASLabel (AESym label) -> do 
+                modifyBackwards (M.insert label addr)
+                modifyForwards  (M.insert label addr)
+                assembleInstructions addr stmts
+            
+
+{-
         lineno :: [[Instruction]] -> [Integer]
         lineno = partialSum . map genericLength 
 
@@ -111,9 +125,9 @@ assemble stmts = mdo
                     _       -> [Left $ "Unsupported unary mnemonic: <" ++ mnemonic ++ ">"]
             _ -> [Left "Ill-formatted instruction"]
         
-        
 
-{-
+
+
 assemble1 :: [ASTStatement] -> Either String [Instruction]
 assemble1 lhs = mdo 
     st <- makeSymbolTable st ins lhs

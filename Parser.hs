@@ -23,9 +23,8 @@ data ASTInstruction
     deriving (Show, Eq)
 
 data ASTStatement
-    = ALLabel ASTExpr
-    | ALInstruction ASTInstruction
-    | ALLabelledInstruction ASTExpr ASTInstruction
+    = ASLabel String
+    | ASInstn ASTInstruction
     deriving (Show, Eq)
 
 removeComment :: String -> String 
@@ -110,35 +109,35 @@ insJump = do
 instruction :: Parser ASTInstruction
 instruction = try insTenary <|> try insOffset <|> try insBinary <|> insJump
 
-lineLabel :: Parser ASTStatement
+lineLabel :: Parser [ASTStatement]
 lineLabel = do 
     _ <- whitespaces 
-    label <- symbol
+    (AESym label) <- symbol
     _ <- char' ':' 
     _ <- char '\n'
-    return $ ALLabel label
+    return [ASLabel label]
 
-lineInstruction :: Parser ASTStatement
+lineInstruction :: Parser [ASTStatement]
 lineInstruction = do 
     _ <- whitespaces 
     ins <- instruction 
     _ <- char' '\n' 
-    return $ ALInstruction ins 
+    return [ASInstn ins]
 
-lineLabelled :: Parser ASTStatement
+lineLabelled :: Parser [ASTStatement]
 lineLabelled = do 
     _ <- whitespaces 
-    label <- symbol 
+    (AESym label) <- symbol 
     _ <- char' ':' 
     ins <- instruction
     _ <- char' '\n' 
-    return $ ALLabelledInstruction label ins 
+    return [ASLabel label, ASInstn ins]
 
-mipsline :: Parser ASTStatement
+mipsline :: Parser [ASTStatement]
 mipsline = try lineLabelled <|> try lineLabel <|> lineInstruction
 
 mipslines :: Parser [ASTStatement]
-mipslines = many mipsline 
+mipslines = concat <$> many mipsline 
 
 parseASM :: String -> Either String [ASTStatement]
 parseASM src = case parse mipslines "mipskl" (removeComments src) of 
