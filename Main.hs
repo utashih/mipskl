@@ -1,16 +1,20 @@
 module Main where 
 
+import Assembler (assemble)
+import Instruction (bytecode)
+import OutputCOE (composeCoe)
 import Parser (parseASM)
 import System.Environment (getArgs)
 
 main :: IO ()
 main = do 
-    putStrLn "mipskl"
     args <- getArgs
-    let (filename:_) = args 
-    src <- readFile filename
-    case parseASM src of 
-        Left  err -> fail $ show err
-        Right ast -> print ast
+    let (inputFile:outputFile:_) = args 
+    src <- readFile inputFile
+    case parseASM src >>= assemble of 
+        Left  err -> putStrLn err
+        Right ast -> do 
+            let bytecodes = map bytecode ast
+            writeFile outputFile $ composeCoe bytecodes
     return ()
     
