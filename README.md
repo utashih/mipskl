@@ -1,8 +1,9 @@
 # mipskl
 ### Introduction
 + A toy MIPS assembler written in Haskell
-+ Using MonadTardis (see [tardis](https://hackage.haskell.org/package/tardis-0.4.1.0) and this [article](http://kcsongor.github.io/time-travel-in-haskell-for-dummies/) by Csongor Kiss)
++ Using the Tardis monad (see [tardis](https://hackage.haskell.org/package/tardis-0.4.1.0) and this [article](http://kcsongor.github.io/time-travel-in-haskell-for-dummies/) by Csongor Kiss)
 + Designed for the course Computer Organization at Zhejiang University
++ Lots of redundant/inefficient code; need refactor 
 ### Usage
 Given a file `test.asm`,
 ```mips
