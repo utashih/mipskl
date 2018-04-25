@@ -2,53 +2,53 @@
 module Assembler where 
 
 import Control.Monad (forM, forM_, mapM)
+import Control.Monad.Tardis (Tardis)
 import Data.Composition ((.:), (.:.))
 import Data.List (genericLength)
 import Data.Maybe (catMaybes, mapMaybe, maybeToList)
 import Instruction (Instruction(..), rIns, iIns, jIns, 
                     mnemonicToOpcode, mnemonicToFunct, bytecode)
-import Parser (ASTExpr(..), ASTInstruction(..), ASTLine(..), parseASM)
+import Parser (ASTExpr(..), ASTInstruction(..), ASTStatement(..), parseASM)
 import Text.Printf (printf)
 import Util (partialSum, wordHex)
 
 type SymbolTable = [(String, Integer)]
+type Assembler a = Tardis SymbolTable SymbolTable a
 
-
-extractInstruction :: ASTLine -> Maybe ASTInstruction
-extractInstruction line = case line of 
+extractInstruction :: ASTStatement -> Maybe ASTInstruction
+extractInstruction stmt = case stmt of 
     ALInstruction ins -> Just ins
     ALLabelledInstruction _ ins -> Just ins
     ALLabel _ -> Nothing
 
-extractLabel :: ASTLine -> Maybe String 
-extractLabel line = case line of 
+extractLabel :: ASTStatement -> Maybe String 
+extractLabel stmt = case stmt of 
     ALLabel (AESym label) -> Just label 
     ALLabelledInstruction (AESym label) _ -> Just label 
     ALInstruction _ -> Nothing
 
 
-assemble :: [ASTLine] -> Either String [Instruction]
-assemble lines = mdo 
-    let st = makeSymbolTable ins  
-    ins <- assembledoit st ins
+assemble :: [ASTStatement] -> Either String [Instruction]
+assemble stmts = mdo 
+    ins <- assembledoit (makeSymbolTable ins) ins
     return $ concat ins 
     where 
         lineno :: [[Instruction]] -> [Integer]
-        lineno ins = partialSum (map genericLength ins)
+        lineno = partialSum . map genericLength 
 
         makeSymbolTable :: [[Instruction]] -> SymbolTable
-        makeSymbolTable ins = mapMaybe correspond (zip lines (lineno ins))
+        makeSymbolTable ins = mapMaybe correspond (zip stmts (lineno ins))
             where
-                correspond :: (ASTLine, Integer) -> Maybe (String, Integer)
-                correspond (line, no) = do 
-                    label <- extractLabel line 
+                correspond :: (ASTStatement, Integer) -> Maybe (String, Integer)
+                correspond (stmt, no) = do 
+                    label <- extractLabel stmt 
                     return (label, no)
 
         assembledoit :: SymbolTable -> [[Instruction]] -> Either String [[Instruction]]
         assembledoit st ins = sequence foo 
             where 
                 aInss :: [Maybe ASTInstruction]
-                aInss = map extractInstruction lines 
+                aInss = map extractInstruction stmts 
 
                 foo :: [Either String [Instruction]]
                 foo = catMaybes (zipWith f (lineno ins) aInss)
@@ -114,25 +114,25 @@ assemble lines = mdo
         
 
 {-
-assemble1 :: [ASTLine] -> Either String [Instruction]
+assemble1 :: [ASTStatement] -> Either String [Instruction]
 assemble1 lhs = mdo 
     st <- makeSymbolTable st ins lhs
     ins <- mapM (assembles st) (extractIns lhs)
     return $ concat ins
     where 
-        makeSymbolTable :: SymbolTable -> [[Instruction]] -> [ASTLine] -> Either String SymbolTable
+        makeSymbolTable :: SymbolTable -> [[Instruction]] -> [ASTStatement] -> Either String SymbolTable
         makeSymbolTable st ins lns = do 
             linenos <- lineno lns 
             return $ traverseLines (zip lns linenos)
             where 
-                traverseLines :: [(ASTLine, Integer)] -> SymbolTable
+                traverseLines :: [(ASTStatement, Integer)] -> SymbolTable
                 traverseLines [] = []
                 traverseLines ((line, no) : lines) = case line of 
                     ALLabel (AESym label) -> (label, no) : traverseLines lines 
                     ALLabelledInstruction (AESym label) _ -> (label, no) : traverseLines lines 
                     ALInstruction _ -> traverseLines lines
                 
-                insLength :: [ASTLine] -> Either String [Integer]
+                insLength :: [ASTStatement] -> Either String [Integer]
                 insLength lns = forM lns $ \line -> case line of 
                     ALLabel _ -> Right 0
                     ALInstruction aIns -> do 
@@ -142,7 +142,7 @@ assemble1 lhs = mdo
                         ins <- assembles st aIns
                         return $ fromIntegral $ length ins
         
-                lineno :: [ASTLine] -> Either String [Integer]
+                lineno :: [ASTStatement] -> Either String [Integer]
                 lineno = fmap partialSum . insLength 
 
         getLineno :: SymbolTable -> String -> Either String Integer 

@@ -22,7 +22,7 @@ data ASTInstruction
     | AIJmp ASTExpr ASTExpr
     deriving (Show, Eq)
 
-data ASTLine
+data ASTStatement
     = ALLabel ASTExpr
     | ALInstruction ASTInstruction
     | ALLabelledInstruction ASTExpr ASTInstruction
@@ -110,7 +110,7 @@ insJump = do
 instruction :: Parser ASTInstruction
 instruction = try insTenary <|> try insOffset <|> try insBinary <|> insJump
 
-lineLabel :: Parser ASTLine
+lineLabel :: Parser ASTStatement
 lineLabel = do 
     _ <- whitespaces 
     label <- symbol
@@ -118,14 +118,14 @@ lineLabel = do
     _ <- char '\n'
     return $ ALLabel label
 
-lineInstruction :: Parser ASTLine
+lineInstruction :: Parser ASTStatement
 lineInstruction = do 
     _ <- whitespaces 
     ins <- instruction 
     _ <- char' '\n' 
     return $ ALInstruction ins 
 
-lineLabelled :: Parser ASTLine
+lineLabelled :: Parser ASTStatement
 lineLabelled = do 
     _ <- whitespaces 
     label <- symbol 
@@ -134,13 +134,13 @@ lineLabelled = do
     _ <- char' '\n' 
     return $ ALLabelledInstruction label ins 
 
-mipsline :: Parser ASTLine
+mipsline :: Parser ASTStatement
 mipsline = try lineLabelled <|> try lineLabel <|> lineInstruction
 
-mipslines :: Parser [ASTLine]
+mipslines :: Parser [ASTStatement]
 mipslines = many mipsline 
 
-parseASM :: String -> Either String [ASTLine]
+parseASM :: String -> Either String [ASTStatement]
 parseASM src = case parse mipslines "mipskl" (removeComments src) of 
     Left error -> Left $ show error
     Right lns  -> Right lns
