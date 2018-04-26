@@ -118,18 +118,11 @@ prettyPrint (ASInstn ins) = case ins of
         printf "    %-8s%s" mnemonic rs
     _ -> "Syntax error"
 
-        
-test :: IO ()
-test = do 
-    src <- readFile "test.coe"
-    let stmts = do 
-        words <- parseFile src 
-        ins   <- disassemble words 
-        let ast = makeAST <$> ins 
-        stmts <- addLabels ast 
-        return $ map prettyPrint stmts
-    case stmts of 
-        Left  err -> putStrLn err
-        Right ins -> writeFile "test.d.asm" (unlines ins)
-    return ()
-    
+
+disasm :: String -> Either String [String]
+disasm src = do 
+    words <- parseFile src 
+    ins   <- disassemble words 
+    let ast = makeAST <$> ins 
+    stmts <- addLabels ast 
+    return $ map prettyPrint stmts
