@@ -1,11 +1,12 @@
 module Parser where 
 
 import Data.Char (isSpace)
+import Data.Maybe (fromMaybe)
 import Text.Parsec.Error (ParseError)
 import Text.Parsec.Number (decimal, int)
 import Text.ParserCombinators.Parsec (Parser)
 import Text.ParserCombinators.Parsec.Char (alphaNum, char, letter, satisfy)
-import Text.ParserCombinators.Parsec.Combinator (many1, sepBy)
+import Text.ParserCombinators.Parsec.Combinator (many1, optionMaybe, sepBy)
 import Text.ParserCombinators.Parsec.Prim ((<|>), many, parse, try)
 import Util ((|>))
 
@@ -93,11 +94,11 @@ insOffset = do
     _   <- whitespaces 
     a0  <- expr
     _   <- char' ','
-    imm <- expr
+    imm <- optionMaybe expr
     _   <- char' '(' 
     a1  <- expr 
     _   <- char' ')'
-    return $ AIOff op a0 imm a1
+    return $ AIOff op a0 (fromMaybe (AEImm 0) imm) a1 
 
 insJump :: Parser ASTInstruction
 insJump = do 
