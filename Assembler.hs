@@ -7,10 +7,10 @@ import Data.List (genericLength)
 import Instruction (Instruction(..), rIns, iIns, jIns, 
                     mnemonicToOpcode, mnemonicToFunct)
 import Parser (ASTExpr(..), ASTInstruction(..), ASTStatement(..))
-import qualified Data.Map.Strict as M 
+import qualified Data.Map.Strict as Map 
 
 type Address = Integer
-type SymbolTable = M.Map String Address
+type SymbolTable = Map.Map String Address
 type Assembler a = Tardis SymbolTable SymbolTable a
 
 
@@ -18,14 +18,14 @@ assemble :: [ASTStatement] -> Either String [Instruction]
 assemble stmts = assembled where
     assembled :: Either String [Instruction]
     assembled = concat <$> instructions
-        where (instructions, _) = runTardis (assembleInstructions 0 stmts) (M.empty, M.empty)
+        where (instructions, _) = runTardis (assembleInstructions 0 stmts) (Map.empty, Map.empty)
 
 assembleInstructions :: Address -> [ASTStatement] -> Assembler (Either String [[Instruction]])
 assembleInstructions _ [] = return (Right [])
 assembleInstructions addr (stmt : stmts) = case stmt of 
     ASLabel label -> do
-        modifyBackwards (M.insert label addr)
-        modifyForwards (M.insert label addr)
+        modifyBackwards (Map.insert label addr)
+        modifyForwards (Map.insert label addr)
         assembleInstructions addr stmts
     ASInstn ins -> do
         bytecodes <- case ins of 
@@ -61,14 +61,14 @@ assembleInstructions addr (stmt : stmts) = case stmt of
                     "beq"   -> do
                         bw <- getFuture 
                         fw <- getPast 
-                        let inst = case M.lookup label bw <|> M.lookup label fw of 
+                        let inst = case Map.lookup label bw <|> Map.lookup label fw of 
                                 Just target -> iIns opcode rs rt (target - addr - 1)
                                 Nothing -> Left $ "Undefined label: '" ++ label ++ "'"
                         return [inst]
                     "bne"   -> do
                         bw <- getFuture 
                         fw <- getPast 
-                        let inst = case M.lookup label bw <|> M.lookup label fw of 
+                        let inst = case Map.lookup label bw <|> Map.lookup label fw of 
                                 Just target -> iIns opcode rs rt (target - addr - 1)
                                 Nothing -> Left $ "Undefined label: '" ++ label ++ "'"
                         return [inst]
@@ -76,7 +76,7 @@ assembleInstructions addr (stmt : stmts) = case stmt of
                         bw <- getFuture 
                         fw <- getPast 
                         let slt = rIns (mnemonicToOpcode "slt") rs rt "$1" 0 (mnemonicToFunct "slt")
-                            bne = case M.lookup label bw <|> M.lookup label fw of 
+                            bne = case Map.lookup label bw <|> Map.lookup label fw of 
                                 Just target -> iIns (mnemonicToOpcode "bne") rs rt (target - addr - 2)
                                 Nothing -> Left $ "Undefined label: '" ++ label ++ "'"
                         return [slt, bne]
@@ -106,14 +106,14 @@ assembleInstructions addr (stmt : stmts) = case stmt of
                     "j"     -> do
                         bw <- getFuture 
                         fw <- getPast 
-                        let inst = case M.lookup label bw <|> M.lookup label fw of 
+                        let inst = case Map.lookup label bw <|> Map.lookup label fw of 
                                 Just target -> jIns opcode target
                                 Nothing -> Left $ "Undefined label: '" ++ label ++ "'"
                         return [inst]
                     "jal"   -> do
                         bw <- getFuture 
                         fw <- getPast 
-                        let inst = case M.lookup label bw <|> M.lookup label fw of 
+                        let inst = case Map.lookup label bw <|> Map.lookup label fw of 
                                 Just target -> jIns opcode target
                                 Nothing -> Left $ "Undefined label: '" ++ label ++ "'"
                         return [inst]
