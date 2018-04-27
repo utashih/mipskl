@@ -174,13 +174,10 @@ opcodeToMnemonic opcode = case opcode of
     0x05 -> Right "bne"
     0x06 -> Right "blez"
     0x07 -> Right "bgtz"
-    0x01 -> Right "bltz"
-    0x01 -> Right "bgez"
+    0x01 -> Left "Error: cannot tell 'bltz' and 'bgez'"
     0x02 -> Right "j"
     0x03 -> Right "jal"
-    0x10 -> Right "eret"
-    0x10 -> Right "mfco"
-    0x10 -> Right "mtco"
+    0x10 -> Right "Error: cannot tell 'eret', 'mfco', and 'mtco'"
     _    -> Left $ "Unknown opcode :" ++ show opcode 
     
 functToMnemonic :: Integer -> Either String String 
