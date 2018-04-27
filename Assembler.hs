@@ -39,6 +39,7 @@ assembleInstructions addr (stmt : stmts) = case stmt of
                     "subu"  -> return [rIns opcode rs rt rd 0 funct]
                     "and"   -> return [rIns opcode rs rt rd 0 funct]
                     "or"    -> return [rIns opcode rs rt rd 0 funct]
+                    "nor"   -> return [rIns opcode rs rt rd 0 funct]
                     "slt"   -> return [rIns opcode rs rt rd 0 funct]
                     "sltu"  -> return [rIns opcode rs rt rd 0 funct]
                     _       -> return [Left $ "Unsupported tenary mnemonic: <" ++ mnemonic ++ ">"]

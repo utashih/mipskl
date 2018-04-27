@@ -21,7 +21,7 @@ dasm inputFile outputFile = do
     src <- readFile inputFile
     case disasm src of 
         Left  err -> putStrLn err
-        Right ins -> writeFile "test.d.asm" (unlines ins)
+        Right ins -> writeFile outputFile (unlines ins)
 
 main :: IO ()
 main = do 
