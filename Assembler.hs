@@ -40,6 +40,7 @@ assembleInstructions addr (stmt : stmts) = case stmt of
                     "and"   -> return [rIns opcode rs rt rd 0 funct]
                     "or"    -> return [rIns opcode rs rt rd 0 funct]
                     "nor"   -> return [rIns opcode rs rt rd 0 funct]
+                    "xor"   -> return [rIns opcode rs rt rd 0 funct]
                     "slt"   -> return [rIns opcode rs rt rd 0 funct]
                     "sltu"  -> return [rIns opcode rs rt rd 0 funct]
                     _       -> return [Left $ "Unsupported tenary mnemonic: <" ++ mnemonic ++ ">"]
@@ -51,8 +52,10 @@ assembleInstructions addr (stmt : stmts) = case stmt of
                     "addiu" -> return [iIns opcode rs rt immed]
                     "andi"  -> return [iIns opcode rs rt immed]
                     "ori"   -> return [iIns opcode rs rt immed]
+                    "xori"  -> return [iIns opcode rs rt immed]
                     "sll"   -> return [rIns opcode "$zero" rs rt immed funct]
                     "srl"   -> return [rIns opcode "$zero" rs rt immed funct]
+                    "sra"   -> return [rIns opcode "$zero" rs rt immed funct]
                     "slti"  -> return [iIns opcode rs rt immed]
                     "sltiu" -> return [iIns opcode rs rt immed]
                     _       -> return [Left $ "Unsupported tenary mnemonic: <" ++ mnemonic ++ ">"]
@@ -109,6 +112,8 @@ assembleInstructions addr (stmt : stmts) = case stmt of
             AIOff (AESym mnemonic) (AEReg rt) (AEImm immed) (AEReg rs) ->
                 let opcode = mnemonicToOpcode mnemonic
                 in case mnemonic of 
+                    "lb"    -> return [iIns opcode rs rt immed]
+                    "lh"    -> return [iIns opcode rs rt immed]
                     "lbu"   -> return [iIns opcode rs rt immed]
                     "lhu"   -> return [iIns opcode rs rt immed]
                     "lw"    -> return [iIns opcode rs rt immed]
@@ -122,7 +127,10 @@ assembleInstructions addr (stmt : stmts) = case stmt of
                     "lui"   -> return [iIns opcode "$zero" rt immed]
                     _       -> return [Left $ "Unsupported binary mnemonic: <" ++ mnemonic ++ ">"]
             AIBin (AESym mnemonic) (AEReg rd) (AEReg rs) ->
-                case mnemonic of 
+                let opcode = mnemonicToOpcode mnemonic
+                    funct = mnemonicToFunct mnemonic
+                in case mnemonic of 
+                    "jalr"  -> return [rIns opcode rd "$zero" rs 0 funct]
                     "move"  -> return [rIns (mnemonicToOpcode "add") rs "$zero" rd 0 (mnemonicToFunct "add")]
                     _       -> return [Left $ "Unsupported binary mnemonic: <" ++ mnemonic ++ ">"]
             AIJmp (AESym mnemonic) (AESym label) ->
@@ -148,6 +156,7 @@ assembleInstructions addr (stmt : stmts) = case stmt of
                     funct = mnemonicToFunct mnemonic
                 in case mnemonic of 
                     "jr"    -> return [rIns opcode rs "$zero" "$zero" 0 funct]
+                    "jalr"  -> return [rIns opcode rs "$zero" "$ra" 0 funct]
                     _       -> return [Left $ "Unsupported unary mnemonic: <" ++ mnemonic ++ ">"]
             _ -> return [Left "Ill-formatted instruction"]
         restInstructions <- assembleInstructions (addr + genericLength bytecodes) stmts 
