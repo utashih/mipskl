@@ -34,15 +34,17 @@ disassemble = mapM unbytecode
 
 makeAST :: Instruction -> ASTInstruction
 makeAST (RIns opcode rs rt rd shamt funct) = 
-    if | mnemonic `elem` ["sll", "srl"] ->
+    if | mnemonic `elem` ["sll", "srl", "sra"] ->
             AITen (AESym mnemonic) (AEReg (show rd)) (AEReg (show rt)) (AEImm shamt)
        | mnemonic == "jr" ->
             AIJmp (AESym mnemonic) (AEReg (show rs))
+       | mnemonic == "jalr" ->
+            AIBin (AESym mnemonic) (AEReg (show rs)) (AEReg (show rd)) 
        | otherwise -> 
             AITen (AESym mnemonic) (AEReg (show rd)) (AEReg (show rs)) (AEReg (show rt))  
     where Right mnemonic = functToMnemonic funct
 makeAST (IIns opcode rs rt immed) = 
-    if | mnemonic `elem` ["lw", "sw"] -> 
+    if | mnemonic `elem` ["lb", "lbu", "lh", "lhu", "lw", "sb", "sh", "sw"] -> 
             AIOff (AESym mnemonic) (AEReg (show rt)) (AEImm immed) (AEReg (show rs))
        | mnemonic `elem` ["beq", "bne"] -> 
             AITen (AESym mnemonic) (AEReg (show rs)) (AEReg (show rt)) (AEImm immed)
@@ -112,6 +114,8 @@ prettyPrint (ASInstn ins) = case ins of
         printf "    %-8s%s, %d(%s)" mnemonic rt immed rs 
     AIBin (AESym mnemonic) (AEReg rt) (AEImm immed) ->
         printf "    %-8s%s, %d" mnemonic rt immed 
+    AIBin (AESym mnemonic) (AEReg rs) (AEReg rd) ->
+        printf "    %-8s%s, %s" mnemonic rs rd 
     AIJmp (AESym mnemonic) (AESym label) ->
         printf "    %-8s%s" mnemonic label 
     AIJmp (AESym mnemonic) (AEReg rs) -> 
