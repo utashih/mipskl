@@ -3,9 +3,9 @@
 + A toy MIPS assembler written in Haskell
 + Using the Tardis monad (see [tardis](https://hackage.haskell.org/package/tardis-0.4.1.0) and this [article](http://kcsongor.github.io/time-travel-in-haskell-for-dummies/) by Csongor Kiss)
 + Designed for the course Computer Organization at Zhejiang University
-+ Lots of redundant/inefficient code; need refactor 
++ Lots of redundant/inefficient code; refactor in need  
 ### Usage
-Given a file `test.asm`,
+Given a file `sample.asm`,
 ```mips
     add     $t0, $zero, $zero
 loop:  
@@ -17,9 +17,9 @@ finish:
     addi    $t0, $t0, 100
     add     $v0, $t0, $zero
 ```
-it generates the following COE file `test.coe`:
+it generates the following COE file `sample.coe`:
 ```
-./Main test.asm test.coe
+./mipskl -a sample.asm sample.coe
 ```
 ```
 memory_initialization_radix=16; 
@@ -33,6 +33,23 @@ memory_initialization_vector=
 01001020;
 ```
 which can then be imported by Xilinx ISE for synthesis.
+
+By disassembling, it can also generates the following 
+assembly from the COE file:
+```
+./mipskl -d sample.coe sample.out.asm
+```
+```mips
+    add     $t0, $zero, $zero
+l1: 
+    beq     $a1, $zero, l2
+    add     $t0, $t0, $a0
+    addi    $a1, $a1, -1
+    j       l1
+l2: 
+    addi    $t0, $t0, 100
+    add     $v0, $t0, $zero
+```
 
 It now supports `add`, `addi`, `addiu`, `addu`, `and`, `andi`, `beq`, `bge`, `bgt`, `ble`, `blt`, `bne`, `j`, `jal`, `jalr`, `jr`, `lb`, `lbu`, `lh`, `lhu`, `lui`, `lw`, `move`, `nor`, `or`, `ori`, `sb`, `sh`, `sll`, `slt`, `slti`, `sltiu`, `sltu`, `sra`, `srl`, `sub`, `subu`, `sw`, `xor`, and `xori`.
 
