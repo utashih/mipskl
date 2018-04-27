@@ -34,7 +34,7 @@ memory_initialization_vector=
 ```
 which can then be imported by Xilinx ISE for synthesis.
 
-It now supports `add`, `addu`, `sub`, `subu`, `and`, `or`, `addi`, `addiu`, `andi`, `ori`, `sll`, `srl`, `lbu`, `lhu`, `lw`, `sb`, `sh`, `sw`, `lui`, `move`, `slt`, `slti`, `sltu`, `sltiu`, `beq`, `bne`, `blt`, `j`, `jal`, and `jr`. 
+It now supports `add`, `addi`, `addiu`, `addu`, `and`, `andi`, `beq`, `bge`, `bgt`, `ble`, `blt`, `bne`, `j`, `jal`, `jalr`, `jr`, `lb`, `lbu`, `lh`, `lhu`, `lui`, `lw`, `move`, `nor`, `or`, `ori`, `sb`, `sh`, `sll`, `slt`, `slti`, `sltiu`, `sltu`, `sra`, `srl`, `sub`, `subu`, `sw`, `xor`, and `xori`.
 
 
 ---
