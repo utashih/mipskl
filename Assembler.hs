@@ -76,11 +76,35 @@ assembleInstructions addr (stmt : stmts) = case stmt of
                     "blt"   -> do
                         bw <- getFuture 
                         fw <- getPast 
-                        let slt = rIns (mnemonicToOpcode "slt") rs rt "$1" 0 (mnemonicToFunct "slt")
+                        let slt = rIns (mnemonicToOpcode "slt") rs rt "$at" 0 (mnemonicToFunct "slt")
                             bne = case Map.lookup label bw <|> Map.lookup label fw of 
-                                Just target -> iIns (mnemonicToOpcode "bne") rs rt (target - addr - 2)
+                                Just target -> iIns (mnemonicToOpcode "bne") "$at" "$zero" (target - addr - 2)
                                 Nothing -> Left $ "Undefined label: '" ++ label ++ "'"
                         return [slt, bne]
+                    "bgt"   -> do
+                        bw <- getFuture 
+                        fw <- getPast 
+                        let slt = rIns (mnemonicToOpcode "slt") rt rs "$at" 0 (mnemonicToFunct "slt")
+                            bne = case Map.lookup label bw <|> Map.lookup label fw of 
+                                Just target -> iIns (mnemonicToOpcode "bne") "$at" "$zero" (target - addr - 2)
+                                Nothing -> Left $ "Undefined label: '" ++ label ++ "'"
+                        return [slt, bne]
+                    "ble"   -> do
+                        bw <- getFuture 
+                        fw <- getPast 
+                        let slt = rIns (mnemonicToOpcode "slt") rt rs "$at" 0 (mnemonicToFunct "slt")
+                            beq = case Map.lookup label bw <|> Map.lookup label fw of 
+                                Just target -> iIns (mnemonicToOpcode "beq") "$at" "$zero" (target - addr - 2)
+                                Nothing -> Left $ "Undefined label: '" ++ label ++ "'"
+                        return [slt, beq]
+                    "bge"   -> do
+                        bw <- getFuture 
+                        fw <- getPast 
+                        let slt = rIns (mnemonicToOpcode "slt") rs rt "$at" 0 (mnemonicToFunct "slt")
+                            beq = case Map.lookup label bw <|> Map.lookup label fw of 
+                                Just target -> iIns (mnemonicToOpcode "beq") "$at" "$zero" (target - addr - 2)
+                                Nothing -> Left $ "Undefined label: '" ++ label ++ "'"
+                        return [slt, beq]
                     _       -> return [Left $ "Unsupported tenary mnemonic: <" ++ mnemonic ++ ">"]
             AIOff (AESym mnemonic) (AEReg rt) (AEImm immed) (AEReg rs) ->
                 let opcode = mnemonicToOpcode mnemonic
